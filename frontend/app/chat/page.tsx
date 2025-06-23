@@ -1,15 +1,23 @@
 "use client"
 
-import type React from "react"
 import { useState, useEffect, useRef } from "react"
-import { Send, Bot, User, Loader2, ArrowLeft, ShoppingCart } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import {
+  Send,
+  Bot,
+  User,
+  ArrowLeft,
+  ShoppingCart,
+  Loader2,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
 import { callChatBotAPI } from "@/lib/runpod"
 import { useCart } from "@/lib/cart-context"
 import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
 
 interface ChatMessage {
   id: string
@@ -19,226 +27,199 @@ interface ChatMessage {
   memory?: any
 }
 
+const quickActions = [
+  "I'd like a latte",
+  "What's popular today?",
+  
+]
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [inputMessage, setInputMessage] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
+  const [input, setInput] = useState("")
+  const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const { addToCart, cartItems, getTotalItems } = useCart()
   const { toast } = useToast()
 
+  /** Scroll helper */
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
+  /** Load welcome message */
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, isTyping])
-
-  useEffect(() => {
-    // Welcome message
-    const welcomeMessage: ChatMessage = {
+    const welcome: ChatMessage = {
       id: "welcome",
       role: "assistant",
       content:
-        "Hi! I'm your coffee assistant! ☕ I can help you find the perfect drink, answer questions about our menu, or take your order. What would you like today?",
+        "Hi! I'm your coffee assistant ☕️. Ask me anything about our menu or tell me what you'd like!",
       timestamp: new Date(),
     }
-    setMessages([welcomeMessage])
+    setMessages([welcome])
   }, [])
 
-  const updateCartFromMemory = (memory: any) => {
-    if (memory?.order && Array.isArray(memory.order)) {
-      memory.order.forEach((item: any) => {
-        if (item.item && item.quantity) {
-          const currentQuantity = cartItems[item.item] || 0
-          const newQuantity = item.quantity - currentQuantity
-          if (newQuantity > 0) {
-            addToCart(item.item, newQuantity)
-            toast({
-              title: "Added to Cart",
-              description: `${item.item} added to your order!`,
-            })
-          }
-        }
-      })
-    }
+  /** Auto-scroll when new messages arrive */
+  useEffect(scrollToBottom, [messages])
+
+  /** Handle cart memory updates */
+  const syncOrderWithCart = (memory: any) => {
+    if (!memory?.order) return
+    memory.order.forEach((item: any) => {
+      if (item.item && item.quantity) {
+        addToCart(item.item, item.quantity)
+        toast({
+          title: "Added to cart",
+          description: `${item.quantity}× ${item.item}`,
+        })
+      }
+    })
   }
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return
+  /** Send message */
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return
 
-    const userMessage: ChatMessage = {
+    const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
-      content: inputMessage.trim(),
+      content: input.trim(),
       timestamp: new Date(),
     }
 
-    setMessages((prev) => [...prev, userMessage])
-    setInputMessage("")
-    setIsLoading(true)
-    setIsTyping(true)
+    setMessages((prev) => [...prev, userMsg])
+    setInput("")
+    setLoading(true)
 
     try {
-      const messagesToSend = [...messages, userMessage].map(({ id, timestamp, ...msg }) => msg)
-      const response = await callChatBotAPI(messagesToSend)
+      const payload = [...messages, userMsg].map(({ id, timestamp, ...m }) => m)
+      const res = await callChatBotAPI(payload)
 
-      setIsTyping(false)
-
-      const assistantMessage: ChatMessage = {
+      const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: response.content,
-        memory: response.memory,
+        content: res.content,
+        memory: res.memory,
         timestamp: new Date(),
       }
-
-      setMessages((prev) => [...prev, assistantMessage])
-
-      // Update cart if there are orders in memory
-      if (response.memory) {
-        updateCartFromMemory(response.memory)
-      }
-    } catch (error) {
-      setIsTyping(false)
-      console.error("Error sending message:", error)
-
-      const errorResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: "I'm having a quick coffee break! ☕ Please try again in a moment.",
-        timestamp: new Date(),
-      }
-
-      setMessages((prev) => [...prev, errorResponse])
+      setMessages((prev) => [...prev, botMsg])
+      syncOrderWithCart(res.memory)
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 2).toString(),
+          role: "assistant",
+          content: "Sorry, I'm having a coffee break ☕ – please try again!",
+          timestamp: new Date(),
+        },
+      ])
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+  /** Handle enter key */
+  const onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
       e.preventDefault()
-      handleSendMessage()
+      sendMessage()
     }
   }
-
-  const quickActions = [
-    "I'd like a latte",
-    "What's popular today?",
-    "Show me pastries",
-    "Something strong please",
-    "What do you recommend?",
-  ]
 
   const totalItems = getTotalItems()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 via-amber-50 to-orange-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <Link href="/">
-                <Button variant="ghost" size="lg" className="text-gray-600 hover:text-gray-900">
-                  <ArrowLeft className="h-6 w-6 mr-3" />
-                  <span className="text-lg">Back to Menu</span>
-                </Button>
-              </Link>
-              <div className="flex items-center space-x-4">
-                <div className="w-14 h-14 bg-amber-600 rounded-xl flex items-center justify-center">
-                  <Bot className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Coffee Assistant</h1>
-                  <p className="text-base text-gray-500">Ask me anything about our menu!</p>
-                </div>
-              </div>
-            </div>
-
-            <Link href="/cart">
-              <Button className="relative bg-amber-600 hover:bg-amber-700 text-white px-8 py-6 text-lg h-auto">
-                <ShoppingCart className="h-6 w-6 mr-3" />
-                Cart
-                {totalItems > 0 && (
-                  <span className="absolute -top-3 -right-3 bg-red-500 text-white text-sm rounded-full h-7 w-7 flex items-center justify-center">
-                    {totalItems}
-                  </span>
-                )}
+      <header className="w-full bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-30">
+        <div className="max-w-5xl mx-auto flex items-center justify-between px-4 py-3">
+          <div className="flex items-center space-x-3">
+            <Link href="/">
+              <Button variant="ghost" size="icon" className="text-amber-700 hover:text-amber-900">
+                <ArrowLeft className="h-6 w-6" />
               </Button>
             </Link>
+            <div className="flex items-center space-x-2">
+              <div className="w-10 h-10 bg-amber-600 rounded-lg flex items-center justify-center text-white">
+                <Bot className="h-5 w-5" />
+              </div>
+              <h1 className="text-lg font-bold text-amber-900">Coffee Assistant</h1>
+            </div>
           </div>
+
+          <Link href="/cart">
+            <Button className="relative bg-amber-600 hover:bg-amber-700 text-white px-3 py-2">
+              <ShoppingCart className="h-5 w-5" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-xs text-white rounded-full h-5 w-5 flex items-center justify-center">
+                  {totalItems}
+                </span>
+              )}
+            </Button>
+          </Link>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Chat Container */}
-        <Card className="border-gray-200 shadow-lg rounded-2xl overflow-hidden bg-white/80 backdrop-blur-sm">
-          <CardContent className="p-0">
-            {/* Messages Area */}
-            <div className="h-[650px] overflow-y-auto p-8 space-y-6 bg-gradient-to-b from-amber-50/50 to-white">
-              {messages.map((message) => (
-                <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`flex items-start space-x-4 max-w-[85%] ${
-                      message.role === "user" ? "flex-row-reverse space-x-reverse" : ""
-                    }`}
-                  >
+      {/* Chat card */}
+      <main className="flex flex-col flex-1 items-center px-2 py-4">
+        <Card className="flex flex-col w-full max-w-3xl flex-1 shadow-xl">
+          <CardContent className="flex flex-col flex-1 p-0">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6" id="chat-scroll-area">
+              {messages.map((m) => (
+                <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[80%] flex space-x-3 ${m.role === "user" ? "flex-row-reverse space-x-reverse" : ""}`}>
                     {/* Avatar */}
                     <div
-                      className={`flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center shadow-md transition-transform duration-200 hover:scale-105 ${
-                        message.role === "user" ? "bg-gray-700 text-white" : "bg-amber-600 text-white"
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-md ${
+                        m.role === "user" ? "bg-amber-600 text-white" : "bg-white border"
                       }`}
                     >
-                      {message.role === "user" ? <User className="h-7 w-7" /> : <span className="text-xl">☕</span>}
+                      {m.role === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4 text-amber-600" />}
                     </div>
 
-                    {/* Message Bubble */}
+                    {/* Bubble */}
                     <div
-                      className={`rounded-2xl px-6 py-5 text-lg shadow-md transition-all duration-200 hover:shadow-lg ${
-                        message.role === "user"
+                      className={`px-4 py-3 rounded-xl shadow-md text-sm leading-relaxed whitespace-pre-wrap ${
+                        m.role === "user"
                           ? "bg-amber-600 text-white"
-                          : "bg-white border border-gray-100 text-gray-900"
+                          : "bg-white border border-gray-200 text-gray-900"
                       }`}
                     >
-                      {message.content}
-                      
-                      {/* Order Summary - Preserving cart functionality */}
-                      {message.memory?.order && message.memory.order.length > 0 && (
-                        <div className="mt-4 p-4 bg-white/90 rounded-2xl border border-amber-200">
-                          <p className="text-base font-semibold text-amber-800 mb-3">Current Order:</p>
-                          {message.memory.order.map((item: any, index: number) => (
-                            <div key={index} className="flex justify-between text-base text-amber-700">
+                      <ReactMarkdown>{m.content}</ReactMarkdown>
+
+                      {/* Order summary */}
+                      {m.memory?.order?.length > 0 && (
+                        <div className="mt-3 border-t pt-3 space-y-1">
+                          {m.memory.order.map((it: any, idx: number) => (
+                            <div key={idx} className="flex justify-between text-xs text-amber-800">
                               <span>
-                                {item.quantity}x {item.item}
+                                {it.quantity} × {it.item}
                               </span>
-                              <span>${(item.price * item.quantity).toFixed(2)}</span>
+                              <span>${(it.price * it.quantity).toFixed(2)}</span>
                             </div>
                           ))}
                         </div>
                       )}
-                      
-                      <p className="text-sm opacity-70 mt-3">
-                        {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </p>
+
+                      <div className="mt-2 text-[10px] opacity-60 text-right">
+                        {m.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </div>
                     </div>
                   </div>
                 </div>
               ))}
-
-              {/* Typing Indicator */}
-              {isTyping && (
+              {loading && (
                 <div className="flex justify-start">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center shadow-md bg-amber-600 text-white">
-                      <span className="text-xl">☕</span>
+                  <div className="flex space-x-3 items-start">
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-lg bg-white border flex items-center justify-center shadow-sm">
+                      <Bot className="h-4 w-4 text-amber-600" />
                     </div>
-                    <div className="rounded-2xl px-6 py-5 bg-white border border-gray-100 shadow-md">
-                      <Loader2 className="h-7 w-7 animate-spin text-amber-600" />
+                    {/* Spinner bubble */}
+                    <div className="px-4 py-3 rounded-xl bg-white border shadow-md">
+                      <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
                     </div>
                   </div>
                 </div>
@@ -246,49 +227,42 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Actions */}
-            <div className="p-6 border-t border-gray-100 bg-white">
-              <div className="flex flex-wrap gap-3">
-                {quickActions.map((action) => (
+            {/* Quick actions */}
+            <div className="px-4 pb-3">
+              <div className="flex flex-wrap gap-2">
+                {quickActions.map((qa) => (
                   <Button
-                    key={action}
+                    key={qa}
                     variant="outline"
-                    className="text-gray-700 text-base px-5 py-5 h-auto rounded-xl border-2 hover:bg-amber-50 hover:border-amber-200 transition-all duration-200"
+                    className="text-xs"
                     onClick={() => {
-                      setInputMessage(action)
-                      handleSendMessage()
+                      setInput(qa)
+                      sendMessage()
                     }}
                   >
-                    {action}
+                    {qa}
                   </Button>
                 ))}
               </div>
             </div>
 
-            {/* Input Area */}
-            <div className="p-6 border-t border-gray-100 bg-gradient-to-b from-white to-amber-50/30">
-              <div className="flex space-x-4">
-                <Input
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Ask about our menu, get recommendations, or place an order..."
-                  className="text-lg py-6 px-5 rounded-2xl border-2 border-gray-200 focus:border-amber-400 focus:ring-amber-400 transition-all duration-200 shadow-sm hover:shadow-md"
-                  disabled={isLoading}
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={isLoading || !inputMessage.trim()}
-                  size="lg"
-                  className="bg-amber-600 hover:bg-amber-700 text-white px-8 h-auto py-6 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  <Send className="h-7 w-7" />
-                </Button>
-              </div>
+            {/* Input bar */}
+            <div className="border-t p-3 bg-white/90 backdrop-blur sticky bottom-0 flex space-x-2">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={onKeyPress}
+                placeholder="Ask about our menu, get recommendations, or place an order..."
+                className="text-sm flex-1"
+                disabled={loading}
+              />
+              <Button onClick={sendMessage} disabled={loading || !input.trim()} size="icon" className="bg-amber-600 hover:bg-amber-700">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
             </div>
           </CardContent>
         </Card>
-      </div>
+      </main>
     </div>
   )
 }
