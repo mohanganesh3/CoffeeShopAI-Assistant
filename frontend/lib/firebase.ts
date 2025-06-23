@@ -1,4 +1,4 @@
-import { fireBaseDB } from "../../config/firebase-config"
+import { fireBaseDB } from "../config/firebase-config"
 import type { Product } from "../types/types"
 import { ref, get } from "firebase/database"
 
