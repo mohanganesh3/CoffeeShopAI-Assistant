@@ -2,10 +2,11 @@
 
 > *Combining the art of coffee with the science of AI to create the perfect digital barista experience*
 
-<h2>Live Demo</h2>
-<p>
-  Check out the <a href="https://coffee-shop-ai-assistant-mohan-ganeshs-projects.vercel.app/" target="_blank" rel="noopener noreferrer">live demo 🚀</a> to experience BrewBuddy firsthand!
-</p>
+## Live Demo
+
+Check out the [live demo 🚀](https://coffee-shop-ai-assistant-mohan-ganeshs-projects.vercel.app/) to experience BrewBuddy firsthand!
+
+> 💡 Tip: You can open the link in a new tab by CTRL+click (Windows/Linux) or CMD+click (MacOS).  
 
 
 ---
