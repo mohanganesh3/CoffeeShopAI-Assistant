@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Header from "@/components/layout/header"
-import ProductImage from "@/components/product-image"
 import { fetchProducts, type Product } from "@/lib/firebase"
 import { useCart } from "@/lib/cart-context"
 import { useToast } from "@/hooks/use-toast"
@@ -207,9 +206,8 @@ export default function MenuPage() {
                         <CardContent className="p-6">
                           {/* Product Image */}
                           <div className="relative overflow-hidden rounded-lg mb-4">
-                            <ProductImage
-                              src={product.image_url}
-                              fallbackSrc={`/fallback-images/${product.image_path}`}
+                            <img
+                              src={product.image_url || "/placeholder.svg?height=200&width=300"}
                               alt={product.name}
                               className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                             />
