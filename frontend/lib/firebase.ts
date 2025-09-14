@@ -23,9 +23,11 @@ const fetchProducts = async (): Promise<Product[]> => {
     if (data && typeof data === "object") {
       for (const key in data) {
         if (data.hasOwnProperty(key) && data[key]) {
+          const productData = data[key]
           const product = {
             id: key,
-            ...data[key],
+            ...productData,
+            image_url: `/fallback-images/${productData.image_path}`, // Overwrite with local path
           }
 
           // Validate required fields
