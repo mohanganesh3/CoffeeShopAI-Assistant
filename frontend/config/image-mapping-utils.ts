@@ -58,6 +58,17 @@ export function addCommonVariations(): void {
     'chocolatine': PRODUCT_IMAGE_URLS['chocolate croissant'],
     'butter croissant': PRODUCT_IMAGE_URLS['croissant'],
     'plain croissant': PRODUCT_IMAGE_URLS['croissant'],
+    
+    // Additional product variations from the problem statement
+    'jumbo savory scone': '/fallback-images/SavoryScone.webp',
+    'chocolate chip biscotti': '/fallback-images/chocolat_biscotti.jpg',
+    'hazelnut biscotti': '/fallback-images/Hazelnut_Biscotti.jpg', 
+    'cranberry scone': '/fallback-images/Cranberry_Scone.jpg',
+    'ginger biscotti': '/fallback-images/Ginger_Biscotti.webp',
+    'oatmeal scone': '/fallback-images/oatmeal_scones.jpg',
+    'ginger scone': '/fallback-images/Ginger_Scone.webp',
+    'hazelnut syrup': '/fallback-images/Hazelnut_syrup.webp',
+    'sugar free vanilla syrup': '/fallback-images/Vanilla_syrup.jpg',
   }
   
   addBulkProductMappings(variations)

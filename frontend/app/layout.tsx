@@ -1,12 +1,9 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
 import { CartProvider } from "@/lib/cart-context"
 import { Toaster } from "@/components/ui/toaster"
 import FloatingChatbot from "@/components/floating-chatbot"
-
-const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "BrewBuddy - Coffee Kiosk",
@@ -21,7 +18,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className="font-sans">
         <CartProvider>
           {children}
           <FloatingChatbot />
