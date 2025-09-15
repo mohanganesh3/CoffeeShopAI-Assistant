@@ -1,6 +1,8 @@
 import { fireBaseDB } from "../config/firebase-config"
 import type { Product } from "../types/types"
 import { ref, get } from "firebase/database"
+import { getProductImageUrl } from "../config/product-image-mapping"
+import "../config/image-mapping-utils" // Load common variations
 
 const fetchProducts = async (): Promise<Product[]> => {
   try {
@@ -27,7 +29,8 @@ const fetchProducts = async (): Promise<Product[]> => {
           const product = {
             id: key,
             ...productData,
-            image_url: `/fallback-images/${productData.image_path}`, // Overwrite with local path
+            // Use web image URL mapping instead of Firebase storage
+            image_url: getProductImageUrl(productData.name, productData.image_path),
           }
 
           // Validate required fields
