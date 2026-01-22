@@ -4,7 +4,7 @@
 
 ## Live Demo
 
-Check out the [live demo 🚀](https://coffee-shop-ai-assistant-mohan-ganeshs-projects.vercel.app/) to experience BrewBuddy firsthand!
+Check out the [live demo 🚀](https://coffee-shop-ai-assistant-dx3d30p7g-mohan-ganeshs-projects.vercel.app/) to experience BrewBuddy firsthand!
 
 > 💡 Tip: You can open the link in a new tab by CTRL+click (Windows/Linux) or CMD+click (MacOS).  
 >
